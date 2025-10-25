@@ -1,0 +1,62 @@
+Assignment 1 – Producer–Consumer Problem
+
+
+1) Program Description (what the program does)  - 
+This project implements the Producer–Consumer Problem using two separate processes (producer and consumer).
+The processes communicate through POSIX shared memory and synchronize access via named POSIX semaphores.
+The producer generates items (characters 'A' through 'J') and writes them into the shared buffer ("table").
+The consumer reads items from that buffer and prints them. The table (buffer) size used is 2.
+Semaphores prevent the producer from writing when the table is full and prevent the consumer from reading when empty.
+A mutex semaphore enforces mutual exclusion when accessing the shared memory structure.
+
+2) Usage Instructions — 
+Environment: Kent State server wasp.cs.kent.edu (Ubuntu-based) using Visual Studio Code Remote SSH.
+
+Compile:
+    gcc producer.c -o producer -pthread -lrt -Wall
+    gcc consumer.c -o consumer -pthread -lrt -Wall
+
+Run (simultaneous execution in one terminal):
+    ./producer & ./consumer &
+
+
+
+3) Explanation of key components 
+Shared memory:
+- Created with shm_open("/my_shared_memory", O_CREAT | O_RDWR, 0666)
+- Size set with ftruncate(shm_fd, sizeof(shared_data))
+- Mapped with mmap(NULL, sizeof(shared_data), PROT_READ | PROT_WRITE, MAP_SHARED, shm_fd, 0)
+- The shared struct (shared_data) contains the buffer and index variables used by both processes.
+
+Semaphores:
+- Three named semaphores used:
+  /sem_empty  : counts available slots (initial value 2)
+  /sem_full   : counts filled slots (initial value 0)
+  /sem_mutex  : binary mutex to prevent simultaneous access (initial value 1)
+- Typical producer sequence:
+    sem_wait(sem_empty);
+    sem_wait(sem_mutex);
+    // write to buffer
+    sem_post(sem_mutex);
+    sem_post(sem_full);
+- Typical consumer sequence:
+    sem_wait(sem_full);
+    sem_wait(sem_mutex);
+    // read from buffer
+    sem_post(sem_mutex);
+    sem_post(sem_empty);
+
+Mutual exclusion:
+- sem_wait(sem_mutex) and sem_post(sem_mutex) wrap the critical sections (buffer read/write) to prevent race conditions and ensure data integrity.
+
+
+Screenshot file included in repository: results.png
+
+5) Notes on implementation details and grading mapping
+- Compilation: uses gcc with -pthread -lrt flags (meets compilation rubric)
+- Execution: producer and consumer are separate processes communicating via shared memory (meets execution & communication rubric)
+- Synchronization: correct use of semaphore waits and posts for empty/full and mutex semaphores (meets synchronization rubric)
+- Shared memory: created, sized, and mapped correctly and both processes use the same shared data structure (meets shared memory rubric)
+- Mutual exclusion: critical sections protected by the mutex semaphore (meets mutual exclusion rubric)
+
+End of Documentation.
